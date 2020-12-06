@@ -35,7 +35,7 @@ def circle_position( img ):
         # calculate the mean
         mu = circles.mean( axis = 0 )  # the mean
         
-        Q = np.cov( circles - mu, rowvar = False )[:2,:2]  # the positional covariance
+        Q = np.cov( circles - mu, rowvar = False )[:2, :2]  # the positional covariance
         
         # make sure there is some uncertainty
         if la.norm( Q ) < min_covar:
@@ -173,6 +173,25 @@ def find_matches( template, image, thresh = None ):
 # find_matches
 
 
+def find_subimg_matches( template, image, roi ):
+    top_left = roi[0]
+    bttm_right = roi[1]
+    
+    sub_img = image[top_left[0]:bttm_right[0], top_left[1]:bttm_right[1]]
+    
+    match_image = image.copy()
+    
+    coords, sub_match_image = find_matches( template, sub_img )
+    
+    match_image[top_left[0]:bttm_right[0], top_left[1]:bttm_right[1]] = sub_match_image.copy()
+    
+    updated_coords = ( coords[0] + top_left[1], coords[1] + top_left[0] )
+    
+    return updated_coords
+
+# find_subimg_matches
+
+
 def normxcorr2( template, image, mode = 'valid' ):
     """Do normalized cross-correlation on grayscale images.
     
@@ -194,11 +213,11 @@ def normxcorr2( template, image, mode = 'valid' ):
     template_norm = template / np.linalg.norm( template )
     
     if mode == 'same':
-        pad_ax0_l = ( t_0 ) // 2
-        pad_ax1_l = ( t_1 ) // 2
-        
-        pad_ax0_r = pad_ax0_l if t_0 % 2 == 0 else pad_ax0_l + 1
-        pad_ax1_r = pad_ax1_l if t_1 % 2 == 0 else pad_ax1_l + 1
+#         pad_ax0_l = ( t_0 ) // 2
+#         pad_ax1_l = ( t_1 ) // 2
+#         
+#         pad_ax0_r = pad_ax0_l if t_0 % 2 == 0 else pad_ax0_l + 1
+#         pad_ax1_r = pad_ax1_l if t_1 % 2 == 0 else pad_ax1_l + 1
         
         image = np.pad( image, ( ( 0, t_0 ), ( 0, t_1 ) ), constant_values = 0 )
         
@@ -225,7 +244,6 @@ def normxcorr2( template, image, mode = 'valid' ):
     
 # normxcorr2
 
-
 def template_correlate( template, image ):
     ''' Returns the top left-point of the bounding box (x, y)'''
     corr = correlate2d( image, template, mode = 'same' )
@@ -237,16 +255,22 @@ def template_correlate( template, image ):
 # template_correlate
 
 
+#======================== MAIN METHODS =========================
 def main():
     data_dir = '../data/'
 #     data_file = data_dir + 'circle-constant_acceleration.mp4'
-    data_file = data_dir + 'video-1606755677.mp4'
-    template_file = data_file.replace( '.mp4', '_template.png' )
+#     data_file = data_dir + 'video-1606755677.mp4'
+#     template_file = data_file.replace( '.mp4', '_template.png' )
+    
+    data_file = data_dir + 'projectile_motion_2balls.mov'
+    template_file = data_file.replace( '.mov', '_template.png' )
         
     video_cap = cv2.VideoCapture( data_file )
     
     counter = 0
     pts = []
+    
+    track = False
     
     # try grabbing the template
     template = cv2.imread( template_file )
@@ -279,8 +303,8 @@ def main():
 #         cv2.destroyAllWindows()
         
         # save the template
-#         cv2.imwrite( template_file, template )
-#         print( "wrote template:", template_file )
+        cv2.imwrite( template_file, template )
+        print( "wrote template:", template_file )
         
         # release and re-grab the video_capture file
         video_cap.release()
@@ -304,7 +328,7 @@ def main():
     # else
     
     # iterate through the video
-    while video_cap.isOpened():
+    while track and video_cap.isOpened():
         counter += 1
         ret, frame = video_cap.read()
         if not ret:
@@ -361,8 +385,11 @@ def main():
 def main_normxcorr():
     data_dir = '../data/'
 #     data_file = data_dir + 'circle-constant_acceleration.mp4'
-    data_file = data_dir + 'video-1606755677.mp4'
-    template_file = data_file.replace( '.mp4', '_template.png' )
+#     data_file = data_dir + 'video-1606755677.mp4'
+#     template_file = data_file.replace( '.mp4', '_template.png' )
+    
+    data_file = data_dir + 'toss_ball.mov'
+    template_file = data_file.replace( '.mov', '_template.png' )
         
     video_cap = cv2.VideoCapture( data_file )
     
@@ -472,8 +499,10 @@ def main_normxcorr():
         plt.show()
         
     # if
+    
+# main_normxcorr
 
 
 if __name__ == '__main__':
-    main_normxcorr()
+    main()
     print( 'Program terminated.' )
