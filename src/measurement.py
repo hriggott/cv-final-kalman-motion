@@ -262,7 +262,7 @@ def main():
 #     data_file = data_dir + 'video-1606755677.mp4'
 #     template_file = data_file.replace( '.mp4', '_template.png' )
     
-    data_file = data_dir + 'projectile_motion_2balls.mov'
+    data_file = data_dir + 'testooo.mov'
     template_file = data_file.replace( '.mov', '_template.png' )
         
     video_cap = cv2.VideoCapture( data_file )
@@ -388,7 +388,7 @@ def main_normxcorr():
 #     data_file = data_dir + 'video-1606755677.mp4'
 #     template_file = data_file.replace( '.mp4', '_template.png' )
     
-    data_file = data_dir + 'toss_ball.mov'
+    data_file = data_dir + 'testooo.mov'
     template_file = data_file.replace( '.mov', '_template.png' )
         
     video_cap = cv2.VideoCapture( data_file )

@@ -3,6 +3,7 @@ from LKBB import Linear_Kalman_Black_Box
 
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def main( args ):
@@ -24,7 +25,10 @@ def main( args ):
     video = cv2.VideoCapture( video_file )
     fps = video.get( cv2.CAP_PROP_FPS )
     N = int( video.get( cv2.CAP_PROP_FRAME_COUNT ) )
+    width = video.get( cv2.CAP_PROP_FRAME_WIDTH )
+    height = video.get( cv2.CAP_PROP_FRAME_HEIGHT )
     print( 'FPS:', fps, '|', '# Frames:', N )
+    print( 'Video frame size: %d x %d' % ( width, height ) )
     
     # Kalman set-up
     dt = 1 / fps
@@ -34,7 +38,8 @@ def main( args ):
     model = Linear_Kalman_Black_Box( dt, cov_dynamics, cov_z )
     
     # - initial position
-    x0, y0, *_ = true_data[0]
+    ( x0, y0 ), _ = meas.find_matches( template, video.read()[1] )
+#     x0, y0, *_ = true_data[0]
     model.setInitialPosition( x0, y0 )  # start with the true location
     
     # initialize the data arrays
@@ -67,7 +72,7 @@ def main( args ):
         
         # perform the measurement
         # - region of interest
-        roi = np.array( [[0, 0], [t_0, t_1]] ) + np.array( [y_pred, x_pred] )
+        roi = np.array( [[0, 0], [t_0, t_1]] ) + np.array( [y_pred, x_pred] ).reshape( -1, 2 )
         roi_uncertainty = 30 * np.array( [[-1, -1], [1, 1]] )
         roi_uncertain = roi + roi_uncertainty  # region of interest to look for the image
         
@@ -77,7 +82,7 @@ def main( args ):
         roi_uncertain[roi_uncertain[:, 1] > frame.shape[1], 1] = frame.shape[1]
         roi_uncertain = roi_uncertain.astype( int )
         
-        y_meas, x_meas = meas.find_subimg_matches( template, frame, roi_uncertain )
+        x_meas, y_meas = meas.find_subimg_matches( template, frame, roi_uncertain )
         x_measured[i] = x_meas
         y_measured[i] = y_meas
         
@@ -96,6 +101,20 @@ def main( args ):
     x_kalman = np.array( x_kalman )
     y_kalman = np.array( y_kalman )
     
+    fig = plt.figure()
+    ax1 = fig.add_subplot( 2, 1, 1 )
+    ax1.plot( x_kalman, y_kalman )
+    plt.title( 'trajectory' )
+    
+    ax2 = fig.add_subplot( 2, 1, 2 )
+    ax2.plot( x_kalman, label = 'Kalman x' )
+    ax2.plot( y_kalman, label = 'Kalman y' )
+    ax2.set_xlabel( 'frame #' )
+    ax2.set_ylabel( 'x|y' )
+    ax2.legend()
+    
+    plt.show()
+    
     print( 'kalman xhapes, (x, y):', x_kalman.shape, y_kalman.shape )
 
 # main
@@ -103,7 +122,7 @@ def main( args ):
 
 if __name__ == '__main__':
     args = {}
-    args['vid_file'] = "toss_ball.mov"
+    args['vid_file'] = "testooo.mov"
     args['data_file'] = args['vid_file'].replace( '.mov', '.csv' )
     args['template_file'] = args['vid_file'].replace( '.mov', '_template.png' )
 
