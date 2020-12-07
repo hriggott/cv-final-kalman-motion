@@ -212,10 +212,10 @@ def annotate_video( video_in_file, x, y, x_actual, y_actual, template ):
     
     # prepare output video
     fourcc = cv2.VideoWriter_fourcc( 'M', 'J', 'P', 'G' )
-    fps = int( video_in.get( cv2.CAP_PROP_FPS ) )
+    fps = video_in.get( cv2.CAP_PROP_FPS )
     height = int( video_in.get( cv2.CAP_PROP_FRAME_HEIGHT ) )
     width = int( video_in.get( cv2.CAP_PROP_FRAME_WIDTH ) )
-    video_out = cv2.VideoWriter( video_out_file, fourcc, fps, ( height, width ) )
+    video_out = cv2.VideoWriter( video_out_file, fourcc, fps, ( width, height ) )
     
     t_0, t_1 = template.shape[:2]
     i = 0
