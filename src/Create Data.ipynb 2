@@ -1,0 +1,971 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "import cv2\n",
+    "from scipy import signal\n",
+    "import time\n",
+    "import math\n",
+    "import csv\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 48,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def generate_linear_constant_velocity(v,init_xpos,init_ypos,width,height,fps):\n",
+    "    num_frames=math.ceil(((width-init_xpos)/v)*fps)\n",
+    "    new_xpos=init_xpos\n",
+    "    \n",
+    "    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')\n",
+    "    out = cv2.VideoWriter('constant_velocity.avi',fourcc, fps, (width, height))\n",
+    "    for i in range(num_frames):\n",
+    "        A1=np.zeros((height,width,3)).astype(np.uint8)\n",
+    "        new_xpos+=(v/fps)\n",
+    "        \n",
+    "        cv2.circle(A1, (int(new_xpos),init_ypos), 3, (255,0,0), 10)\n",
+    "        cv2.cvtColor(A1, cv2.COLOR_RGB2BGR)\n",
+    "        out.write(A1)\n",
+    "        \n",
+    "    out.release()\n",
+    "    \n",
+    "    return A1\n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 51,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A1= generate_linear_constant_velocity(40,10,70,600,600,30)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 154,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7fdd005ea4c0>"
+      ]
+     },
+     "execution_count": 154,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAPsAAAD7CAYAAACscuKmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAADh0RVh0U29mdHdhcmUAbWF0cGxvdGxpYiB2ZXJzaW9uMy4yLjIsIGh0dHA6Ly9tYXRwbG90bGliLm9yZy+WH4yJAAAe2klEQVR4nO2de3Cc9XX3P2clWbZly/LdsmUb37BfQgATA4YA5uYUCMFlMlDakDp5k4FJeanJtBMglBDaMjApBTpD0sYloU3LQEjsBOqm3MylJsVgCIbYGAPCRpIvsny3rLv2vH+c3UrWxV5Ju8/z7D7nM/MbaZ+V9jn7PPvd87ucc36iqjiOU/gkwjbAcZxgcLE7TkxwsTtOTHCxO05McLE7TkxwsTtOTBiS2EXkchHZKiIfi8jt2TLKcZzsI4NdZxeRIuBDYClQB2wA/lhV38+eeY7jZIviIfzv2cDHqvoJgIg8CSwD+hW7iHgEj+PkGFWVvo4PpRs/Dajt9rgudewYRORGEXlLRN4awrkcxxkiQ/HsfX179PLcqroSWAnu2R0nTIbi2euA6d0eVwE7h2aO4zi5Yihi3wDME5FZIjIMuB54JjtmOY6TbQbdjVfVDhH5f8BzQBHwU1XdnDXLHMfJKoNeehvUyXzM7jg5Jxez8Y7j5BEudseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQlD2cXVySMmTIALLoBRo4I5X1sbvP461NQEcz7nxLjYY8Ls2fC3fwszZwZzvsOH4VvfcrFHCRd7AVBSAvPnw9ix/f/NZz5jz5eVBWOTKnz2s7B/f+/n9u+HrVuhoyMYWxzDN3YsAMaNg4cfhksu6f9vhg0zsRcH9PWeTMKBA9DS0vu5F1+EW2+FgweDsSVu9Lexo3v2PKK8HCZOBOlxK8eOhRkzYNq0cOzqi0QCxo/v+7np02Hu3N5iTyahoQGOHMm9fXHEPXsesWwZ3HabeenuFBfDSSfBmDGhmDVgDh2C7dt7d+NbW+H+++E//iMUswoG9+x5yMiRxwp7xgw480woLQ3PpmwwZgycfnrv483N5vUrKno/19EBR4/aXIAzONyzR5TSUrj5Zrjwwq5jM2fapFdRUXh25ZLOTnjvvb5n8Ddtggcf7HvCzzkW9+x5RFERDB8OZ51lXfe4UFQECxda60lFBaxcaUt6YB4+mXRPPxBc7BGjogK++lVbSjvjjLCtiQ5z5sBf/ZV15QGamuCJJ8zjOxmiqsdtwHTgZWALsBlYkTo+DngB+Cj1c2wGr6Xejt+qqtB169Bk8oS3JnYtmexq+/ejV18d/v2KYuvvAmbi2TuAv1DV34nIaOBtEXkB+BqwVlXvF5HbgduB2zJ4Pacbc+bAZZd1TbpVVMDUqb2X15xjr0lpKXzpS7YKkWbjRli3Du/a98dAv16Bp4GlwFagMnWsEtjqnn3g7Zpr0IYGtK3NWnu7e/VMvXxHR9d1a2tDH3wQLS4O/56G3Ybi2f8XETkJWAi8AUxW1V3Yq+8SkUn9/M+NwI0DOU+hIgKnngqzZnUdO+ccGDHCQl6dzBGxCb3uKxNz55q337ED3nkH2tvDsy+KZLz0JiKjgFeBe1V1tYgcVNWKbs8fUNXjRGf70ltJCdx7L3zzm8ceKyvzbns2aGmxtfrf/MaWLQ8dCtuicNChLL2JSAmwCnhcVVenDteLSGXKq1cCe7JjauFRVGRjy/HjLTDmeAkrzuAZPtzatGm2klFfD9u2WWSek4FnFxEB/hXYr6q3djv+d8C+bhN041T1Oyd4rVh69ooKCwO95BKLbe8rQszJHo2NJvT33rOEm7il2Q7Fs38e+CrwexHZmDr2XeB+4CkR+QZQA1ybDUMLgWHDLBMtkaoDNHaszbrPmxeuXXFh1ChrTU0WfpuOwVe15Jvm5nDtCwsPl80BCxfCnXd2ZX2VlMCCBf1ngTm54cgReP/9LnG3tMBDD8Hzz4drV64Z0pjdyYyiIvPqU6bAeedBZWXYFsWb0aNttSNNUxOsWmUJRu3t8Zutd8+eRS64AJYvt67j+efbh8qJDh0dsH49VFfDr34FTz8dtkW5wT17jhGxdd4/+RNbN3eiR3GxfQmfdx588onlzSeTYVsVHC72LHDxxbBkiS33BFX2yRk8InbPioos+GbNmnjUw/Nu/BARgbvvhrvu6gqM8QCZ6JP+2D/2mAXg9FUrL1/xbnyWKSqy7uDcuebRRfJD5EeOwKuvWq23bDJpElx0UXDVa4dK+l6dfLKlFNfUwH//d2Evy7nYB8mwYfCnf2pj9HyKa9+/Hx54AN58M7uve+65VmoqX8SeZvFi+Nzn4JVX4N13XexON4YNsxrsU6ZY6GsUZ9xVzVNVV3d1V9PU18OePdn/UNfXw2uvWYRgf1RVWWBRIkKbjhUXW5syxSbvamth82aLwis0fMw+QKZMgUcesS78mDHRFfuPfgT33dd7trmjw6LIsr3GXFJikYLHq4/3ta/BPfdEsyfU2mrX5cMPbSebzZvDtmjw+Jg9S6TroUchYKa1FXbu7DvRY9s22LUruKWl9nbrMRyPTz+1nWDSKxalpVaoIwrVcktLYfJk29iiUFdUCvRtxYO6Oqsj//HHvZ/bsyd6a8jPP28149KTY/PnW4JQ9/x+J3e42DOkqMiSK8aODb8b2t7eldn1/vuwZUu49mTK3r3W0nR22pdSebk9FrEJvjA9fVGRDc8qKqy4ZSGF1PqYPUPmzIHvfMd2Q124MNyklnfegb//e/Psv/td/m6XVF5um16kZ/BLS228fNll4dnU2GjXtK7O9s/bsCE8WwaLj9kHSbr80fjxlo8+d26w51e17nhnZ9ex3butS5zttfKgOXzYlrzSDB8OV1xhe7sXFdn8SNCxC6NG2cYc+/bBU0/Z+D2ZjN6QaDC42E/Aqada0MWMGTBhQvDnV4X//M9j0zJrawtzaai93WrBb9xoor/yyvBsKSuz8mEXXwyrV1vATd4TZElQIlB5c6Dt6qutRnlYFVQ7O9E77gj/OgTd7rrL3nv3WvFh3IPWVvTmm8O/HgNpWaku6wRHWxu88IJNwL3xRtjWBM/69ba3W5rp083Tjx4dnk35jos9orS1WZf2yScLY7w4UF58EV56qevxhRdahJuLffC42PthzhzbMfWcc4JdamtqshngHTssCKX7xFycUD32ve/ZA//1X+bhzz47uAq9iYTF/F9zDXz0kUXWBbiAlV18zN53u+km26mlsTHY8WJtLfqFL6Dl5WhJSfjXISqtqAgdPRpduBB9551g502amtADB9C/+RuzI+xrcaLmY/YBUlpqwRVBefXGRqueUlNjwTLprYkdo7PT4gkaGuD3v7ehzaxZuffwIlZ5KF2TPp9xsUeE6mpYscJi2uvrw7YmuuzeDXfcYdl1P/gBLF0atkX5g4u9BxUVFlhRURFMQEdTk+WY19SY0OO2ocFA6eiw+YwjR+xa1dbavQpi4q683NJ0GxvtnuXd2N3H7MeOC1essP3Rq6uDGau//LKN0U87DS0tDf8a5EsrKkIXLEAvvBB96qlg7lVdHfraazZ2LysL/xr013zMfgJKS21MdvLJ8PnP596rt7VZ27HD1pR9jD4wOjvhgw8s4++qqyxppaTEiovk6t5Nm2atocG8fDJptevyxcN7IgxWgOKmm+CssyzJZcGC3J5P1XYaffJJW15bv76wsquCRMSSaebPhz/4A/jKV45fQCMb1NTYPfvgAytkErUcBe0nEca78aAVFeivf537S5AOf+3sRH/wg/xYxsmndsstaEtLV5htru/n+vXo7Nnhv++ezbvxESCZNI++fr2FwMYxMi6XrF8P3/++1Qj88pd9s46euNgDpLMTnnsOfvjDsC0pTDZssLZsGXzxiy72nsRa7OXllsI4YwbMnBm2NU62CGoaatIkuO462L4dXn45+vERsRb7xIlWw+3MMwu3yKCTO2bOtGFDba3tIeBijzAitlST65pnbW2WQLF7t30wnNzS0GAVcCor4bTTclfuO5Gwz05pabRq4fdHrMUeFI2NVjPu+ecLs8JM1Hj7bbjxRtuW68c/trqBjos9EFRtA4KorccWKm1tVsV2//74pgj3RcadDxEpEpF3RGRN6vE4EXlBRD5K/Qwow9hxnMEwkJHGCqB7hfLbgbWqOg9Ym3qcF5SUwLhxlh6Zy4m5jg7bYWTvXvM2TrCkr/++fbm9/omEJeOMHx+N3W36JcPItypM0JcAa1LHtgKVqd8rga35EkH32c+iP/sZ+sor6MGDuYuwqqmxYoWXXopOnBj++45bKy+3RJkbbkDffTd397mpCf2f/0FXrUKXLAn/ffervwzF/kvgc8BFdIn9YI+/OdDP/94IvJVqoV8IsBtSV5f7cMotW9DTTw///ca9TZ1q2YW5vt9HjqDXXx/+++3PwBN240XkKmCPqr59or/tC1VdqaqLVHXRYP7fcZzskMmI9fPA1SJyJTAcKBeRfwfqRaRSVXeJSCVwgj0844N1aJyokb4vQe8yExVO6NlV9Q5VrVLVk4DrgZdU9QbgGWB56s+WA0/nzMo8o6bG9kd/9NETb2Ps5J7GRivL/dBD+b3v+lAZylz0/cBTIvINoAa4Njsm5T/V1XDffcHuj+70z+HD9sU7cqSFSJ96atgWhcOAxK6qrwCvpH7fB1yafZPyH9XC2QywUEjfjzgPsfIgotdxnGwQK7FPmGC7iZxyiiXAOE42SSRg3jxYvBimTg3bmt7ESuwXXACPPQZ33RXc9kFOfBg+HG65BR5/HP7wD8O2pjexSoQZNcpykMvKwrbEKUQSCZsAHD/edhOKGrHy7I4TZ1zsWaS93XYqaW72mfgoomp13o8cgdbW+M3Mx6obn2t++1tbz62rg0OHwrbG6UlbG/zkJ7B2LVx7rVWgjRMu9iyybRusWmXew4kenZ3w5ptWgTZdbjpOeDfecWKCi91xYoKL3XFigovdcWKCi91xYoKL3XFigovdcWKCi91xYoKL3XFigovdcWKCi91xYoKL3XFigovdcWKCi91xYoKL3XFigovdcWKCi91xYoJXqskikybBuefa/m4ffmg16ZzokEjAnDkweTJMnx62NcHjYs8iS5bAaafBa6/Brbf6po5Ro7QUvvUtK0cVxVLPucbFnkVGjbI2aRIUFYVtjdMTEavpPmNG2JaEg4/ZHScmxMqzt7XZ9r2qtn1vwr/qnCyiansGtLZaixqxEvvrr9uY7bTTYMUK69I5TrZobYWVK2HdOti8OWxrehMrsdfUWDt4EG66KWxrnEKjowPeeANWrw7bkr7xjqzjxAQXu+PEhFh144Oiqgq+9jX49FN4/nnYuzdsi+JNWRksXQqzZsH8+WFbEx4ZiV1EKoBHgVMBBf4vsBX4OXASsB24TlUP5MTKPGPePLjnHvjgA9i0ycUeNmPGwM03w4UXxjv+IdNu/D8Az6rqAuB0YAtwO7BWVecBa1OP84J9++DFF+Gll3Kz22oiASUl1kSy//rOwCkuhmHDciP25mbbwffZZ2Hnzuy/ftZQ1eM2oBzYBkiP41uBytTvlcDWDF5Lo9CKi9GKCnTRInTjxhNegkG3LVvQ008P//3GvU2dir78cu7uc10desUV6Lhx6LBh4b/f/gzNpBs/G2gAHhOR04G3gRXAZFXdhb36LhGZ1Nc/i8iNwI0ZnCcwOjps+e3gQfs9V5SW2hixs9OW/A4fzt25nN6MGAEnnWRzKKNG5e48yaTd2/37c3eObJBJN74YOBP4R1VdCBxlAF12VV2pqotUddEgbcxbpk6F+++Hf/5nOPPMsK2JH7NmwUMPwY9+BKecErY14ZOJ2OuAOlV9I/X4l5j460WkEiD103O8elBaah+4efNsRtgJluHDYfZsmDvXwqPjzgnFrqq7gVoRSS9aXAq8DzwDLE8dWw48nRMLHcfJCpmus98CPC4iw4BPgK9jXxRPicg3gBrg2tyYmDtULZ65pcVmznO5LDNsmHma9nYbwzu5I70aUlqa29WQZNKSq1pa7PeoI6lZ8mBOJhLcyTJg9Gi46CKrWvLNb8LChbk5T0uLFbTYvh2eeMKW/JzcccYZdj+nT7f7W16em/N88gn80z/ZfX311egUK1HVvr/icrYeEeGlt56togL99a9zfwlaW9Gbbw7//RZ6W7YM3b8/9/dz/Xp09uzw32/PNpSlNydLFBXBFVfAuHGwfr0F9gTYsSp4zj7bwmJPOcWGTM6xuNgDJJGAK680wT/4oHXnffyePc45B773PRuvO71xsQeIh87mFpGu5vTGU1wdJya4Z8dCZjdvtrH07NkwbVruz1lVBRdcAPX1VmPeu/ODQ8Tu2dSpVhM+CK/e0GD3bNMmS4LJG3w2HhWxJIYZM9BHH0WTydxfjsOHLYHixz9GR48O/xrkaysqQu+5B62tRQ8cCOberVmDLliATpxo5w/7GvRsPht/HFQtieHwYWhsDOaco0dbmzHDwjkbGmD37twm5hQSiYTt7FJeDjNnWm8sqLF6czPs2pWb9Ohc4mIPmXPOgZ/+FN57D777XdixI2yL8oOyMvjLv7Sgmaoqn5TLBBd7N1TtW/vgQQu1HDEi9x+isWOtdXbCxIlw5AgcPepj+P5IJEzo48fDggXBZhO2tNjn4+hR8jI+Itbhsj0Rgc98xiZ8vvQl+PrXgytjdOAAvPWW5b0/8ICVtHJ6U1lpHn3BAgtvrqwM5ryq8PTT8LOfQV0dvPNOdIdc2k+4rHv2bqjaDOumTVb0IJkMTuxjx1r0V22tfaA+/ti8ez56kFwgYl69vNy67mHUB/j4Y3jmmfztdbnYI0ZFhRVHvPJK+PnPzYM41tu64Qb7Eg5iabQQcbFHjNGj4dprbVy4caOLPU1VlWWyBTnrXmi42Pth40Z45BFbFlu6NNjEChGL7778cpu0e/11G8/HibPPtpWKtLDnzrU6ckELvbPT9m57911LU86HvPV+8aCavpuIVaG95ppg0iV7tmQS7ehAW1rQ224L/3oE3e6801KC29qstbcHEzDTs7W2orfcYp+FRCL865JJ86CaAaJqs607dsBvfmPdx0WLclultDsiNjmYXiFYtoz/naxraIC337YqKYVEImE77M6caWmqYdbdb2uD3/3O7n91dXRn3geEe/bjt5ISdMwYdMkStLo6HA/f1GS9i3RbvRqdMCH8a5PtNnw4+sgj9h6bmsLx5Om2bx/6R39khU2iUAt+IM09+yBpb7ewyPp6i3I7etRmhEePDub8IhbcM2JE17HKSiu9tHOnlUZqaQnGlmwzYoRV303Ph5SWWimpsWPDs6mlBbZts3DYHTsswKpQ8KCaDCktNZFVVVnQyznnhGfL0aMWR791K9x6K3z0UXi2DIUFC6yu++zZ9jiRsAnJMWPCs+mTT+Db37ZYi/p6u9b5hnpQzdBobbXCgm1t4ac1lpVZOmdnp3nCvj6QjY3R24GmrOxYIU+fbrPsc+eGZ1NP2tps991PPgnbkuzjYs9jpk2zHWf6EvsTT9hONAF23E7I0qUWMFSc+tSNGmV56E4wuNgHiKqN65qarBZ8cYhXsKwMzjqr93FVm0kuK+u9LqxqvZRsrxcnEieu0z5rFixZEs0acZ2ddl2am/N8Lf04uNgHyMGDNs5ctQqWL4fzzw/bor75whds/NvTs+/da3ufVVdn93xz5sCf/ZlV++mP+fOjuz/61q1WA/7TTy3RpSDxpbfBtZEj0X/5F7SzM9wlooG2bdvQc8+1oKFstvPPR2tqwn9/A23JpN3DF15Ap0wJ/3OVjeZLb1mmvR1+9SubyLn4Yuue5kPMdkWFxZhffnl2X3f69NztvJJLNm6ENWtsRSOoKkVh4UtvQySRgLvvhrvuyg+x5/p258M16M5jj9mkYdgrLNnEl95yRDJpmWmPPQYnnwyLF4c7aXci8k2MuUDVPPrGjZbcUhChsBngnj0LFBfbDPNXvwoPP3xstJsTPZJJuPdeuO8+E3p7e9gWZRf37Dmko8Pap5/CK6/AlCmWyFFaGrZlTnc6O23WfedOG6MXUtc9E9yzZ5ERIyxC7PzzLRd+8uSwLXK609QEt98Ov/iFTcYV6oSce/YAaG62VltrO4YcOGDHi4osrj6o9FjHaGkxL55OBW5utt7X7t3h2hUW7tlzwKhRlpOdnqirqIC//mu48MJw7YobW7bAbbdZxV6wsXpdXdeXcKHinj1AGhtt77g0Y8dauuT+/TBypO8dnmva2royAzdtspRVJ0PPLiLfBr6JRej8Hvg6MBL4OXASsB24TlWP+50ZF8/ek5ISyz+fOtUCWq66KmyLCpv1621VZMcOyxFoagrbomDpz7OfcMtmEZkG/DmwSFVPBYqA64HbgbWqOg9Ym3rs9EF7O2zYYOWtqqvN86RbR0e0MtPymc5Ou9Y7dsBzz9kaetyEfjwy7cYXAyNEpB3z6DuBO4CLUs//K/AKcFuW7SsoOjth9epji02ccQZ85Su+Np8N1q2z61td7SLvkwwTWFYAjUAD8Hjq2MEef3Ogn/+9EXgr1UJPEoha+/KXu7YaTrewk0PypXW/Zskk+vDDVgU27Hsadht0IoyIjAWWAbOAg8AvROSGE/1fGlVdCaxMvZZm+n9x4cMPbU0+PWlXXg5f/KLvenIiWlrg2WdtS6Y0eV/XPcdk0o2/DNimqg0AIrIaOA+oF5FKVd0lIpXAnhzaWbBs2gTvv9/1uKrKSke72I9Pc7PtiffMM13Hkkl8/uM4ZCL2GmCxiIwEmoFLsS75UWA5cH/q59O5MrKQUT12o8DGRnj1Vdi3z3YpnT49PNuiREOD7YqTDnE9etTWzPN1k8VQyHDMfg/wAbAJ+DegFBiPzcJ/lPo5LoPXCX08E/UmgpaVoZWV6C9+Ef64OCpt3Tp0wQKr4T9mDFpe7uPz/tqgx+zYf98N3N3jcCvm5Z0sompeK5m0Pdo3bOh6bsIEi8xLnHDBND9JJi2cde/e3s9t2mS9nUOHgrerUPBw2YgiYjXkusfTX3cdfP/7hZtN19IC3/ue1ffrSXMz7Nnj3fZMUA+XzS9U7cO9p9u05/btlmTTU+yJhBV6zJe1+uZmCx3uOXPe3GzvsRBrtkcB9+x5xOTJtntKz258RQXceSece244dg2U3/7Wikf03MQimbSAmD2+rjMk3LMXAPX11noyfrztTXa8/OxEwtbygxrvq1od9r5KPu3aBW+8Yd7dCQ737AVAaal59ePtrjJvnhVWnDgxGJuammxHmjff7P3cjh3w+uuFt+V0VOjPs7vYY8LixfD447YDbRAcOmQZfqtXB3M+pwvvxsec2lp48MHgdkhtbT02MtAJH/fsjlNg9OfZCzQ8w3GcnrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmuNgdJya42B0nJrjYHScmBL1l817gaOpnvjCB/LE3n2yF/LI3X2yd2d8TgW7ZDCAib6nqokBPOgTyyd58shXyy958srU/vBvvODHBxe44MSEMsa8M4ZxDIZ/szSdbIb/szSdb+yTwMbvjOOHg3XjHiQkudseJCYGJXUQuF5GtIvKxiNwe1HkzRUSmi8jLIrJFRDaLyIrU8XEi8oKIfJT6OTZsW9OISJGIvCMia1KPo2xrhYj8UkQ+SF3jc6Nqr4h8O/UZ2CQiT4jI8KjaOhACEbuIFAE/BK4ATgH+WEROCeLcA6AD+AtV/T/AYuDmlI23A2tVdR6wNvU4KqwAtnR7HGVb/wF4VlUXAKdjdkfOXhGZBvw5sEhVTwWKgOuJoK0DRlVz3oBzgee6Pb4DuCOIcw/B5qeBpcBWoDJ1rBLYGrZtKVuqsA/dJcCa1LGo2loObCM1IdzteOTsBaYBtcA4LMJ0DfCFKNo60BZUNz59AdPUpY5FEhE5CVgIvAFMVtVdAKmfk8Kz7BgeBr4DJLsdi6qts4EG4LHUsONRESkjgvaq6g7gAaAG2AUcUtXniaCtAyUosUsfxyK55icio4BVwK2qejhse/pCRK4C9qjq22HbkiHFwJnAP6rqQiw/IpLd4NRYfBkwC5gKlInIDeFalR2CEnsdML3b4ypgZ0DnzhgRKcGE/riqrk4drheRytTzlcCesOzrxueBq0VkO/AkcImI/DvRtBXs/tep6hupx7/ExB9Fey8Dtqlqg6q2A6uB84imrQMiKLFvAOaJyCwRGYZNeDwT0LkzQkQE+AmwRVUf7PbUM8Dy1O/LsbF8qKjqHapapaonYdfyJVW9gQjaCqCqu4FaEZmfOnQp8D7RtLcGWCwiI1OfiUuxycQo2jowApz4uBL4EKgG7gx7sqIP+87HhhbvARtT7UpgPDYR9lHq57iwbe1h90V0TdBF1lbgDOCt1PX9NTA2qvYC9wAfAJuAfwNKo2rrQJqHyzpOTPAIOseJCS52x4kJLnbHiQkudseJCS52x4kJLnbHiQkudseJCf8fBWQYHtaa6rkAAAAASUVORK5CYII=\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "A1=np.zeros((100,100,3)).astype(np.uint8)\n",
+    "\n",
+    "cv2.circle(A1, (50,50), 30, (255,255,0), 10)\n",
+    "cv2.cvtColor(A1, cv2.COLOR_RGB2BGR)\n",
+    "cv2.imwrite('templatefor_tossball_two_balls.png',A1)\n",
+    "plt.imshow(A1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 155,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7fdd00f22fa0>"
+      ]
+     },
+     "execution_count": 155,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "A1=np.zeros((70,70,3)).astype(np.uint8)\n",
+    "\n",
+    "cv2.circle(A1, (35,35), 20, (255,255,0), 10)\n",
+    "cv2.cvtColor(A1, cv2.COLOR_RGB2BGR)\n",
+    "cv2.imwrite('templatefor_no_noise_linear_acceleration.png',A1)\n",
+    "plt.imshow(A1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 160,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7fdd63b376d0>"
+      ]
+     },
+     "execution_count": 160,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "A1=np.zeros((80,80,3)).astype(np.uint8)\n",
+    "cv2.circle(A1, (int(40),int(40)), 10, (255,255,0), 10)\n",
+    "cv2.rectangle(A1,(40-20,40-20),(40+30,40+30),(0,255,0),3)\n",
+    "cv2.rectangle(A1,(40-10,40-20),(40+15,40+15),(0,255,0),3)\n",
+    "cv2.imwrite('templatefor_linear_acceleration_with_noise.png',A1)\n",
+    "plt.imshow(A1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 167,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#noise\n",
+    "def generate_linear_constant_acceleration_noise(A,v_init,init_xpos,init_ypos,width,height,fps,radius):\n",
+    "    a=0.5*A\n",
+    "    b=v_init\n",
+    "    c=-(width-init_xpos)\n",
+    "    total_t=(-b+np.sqrt(b**2-4*a*c))/(2*a)\n",
+    "    print(total_t)\n",
+    "    num_frames=math.ceil(total_t*fps)\n",
+    "    new_xpos=init_xpos\n",
+    "    \n",
+    "    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')\n",
+    "    out = cv2.VideoWriter('linear_acceleration_with_noise.avi',fourcc, fps, (width, height))\n",
+    "    with open('linear_acceleration_with_noise.csv','w',newline='') as csvfile:\n",
+    "        fieldnames = ['position x','position y', 'velocity x','velocity y']\n",
+    "        writer = csv.DictWriter(csvfile,fieldnames=fieldnames)\n",
+    "        writer.writeheader()\n",
+    "        for i in range(num_frames):\n",
+    "            A1=np.zeros((height,width,3)).astype(np.uint8)\n",
+    "            v_init+= A*1/fps\n",
+    "            new_xpos+=v_init*(1/fps) +0.5*A*(1/fps)**2 + np.random.randint(low=-3, high=3, size=1)\n",
+    "            #init_ypos +=  np.random.randint(low=-5, high=5, size=1)\n",
+    "            print(init_ypos)\n",
+    "            cv2.circle(A1, (int(new_xpos),int(init_ypos)), radius, (255,255,0), 10)\n",
+    "            cv2.rectangle(A1,(int(new_xpos)-20,int(init_ypos)-20),(int(new_xpos)+30,int(init_ypos)+30),(0,255,0),3)\n",
+    "            cv2.rectangle(A1,(int(new_xpos)-10,int(init_ypos)-20),(int(new_xpos)+15,int(init_ypos)+15),(0,255,0),3)\n",
+    "            #cv2.ellipse(A1,(int(new_xpos),int(init_ypos)),(64,50),0,120,170,(255,120,80),5)\n",
+    "            cv2.cvtColor(A1, cv2.COLOR_RGB2BGR)\n",
+    "            out.write(A1)\n",
+    "            writer.writerow({'position x': new_xpos[0]-40,'position y':init_ypos-40,'velocity x':v_init, 'velocity y':0})\n",
+    "        \n",
+    "    out.release()\n",
+    "    return A1\n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 165,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#no noise\n",
+    "def generate_linear_constant_acceleration(A,v_init,init_xpos,init_ypos,width,height,fps,radius):\n",
+    "    a=0.5*A\n",
+    "    b=v_init\n",
+    "    c=-(width-init_xpos)\n",
+    "    total_t=(-b+np.sqrt(b**2-4*a*c))/(2*a)\n",
+    "    print(total_t)\n",
+    "    num_frames=math.ceil(total_t*fps)\n",
+    "    new_xpos=init_xpos\n",
+    "    \n",
+    "    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')\n",
+    "    out = cv2.VideoWriter('(no_noise)linear_acceleration.avi',fourcc, fps, (width, height))\n",
+    "    with open('(no_noise)linear_acceleration.csv','w',newline='') as csvfile:\n",
+    "        fieldnames = ['position x','position y', 'velocity x','velocity y']\n",
+    "        writer = csv.DictWriter(csvfile,fieldnames=fieldnames)\n",
+    "        writer.writeheader()\n",
+    "        for i in range(num_frames):\n",
+    "            A1=np.zeros((height,width,3)).astype(np.uint8)\n",
+    "            v_init+= A*1/fps\n",
+    "            new_xpos+=v_init*(1/fps) +0.5*A*(1/fps)**2 \n",
+    "            \n",
+    "            print(init_ypos)\n",
+    "            cv2.circle(A1, (int(new_xpos),int(init_ypos)), radius, (255,255,0), 10)\n",
+    "            #cv2.rectangle(A1,(int(new_xpos)-50,int(init_ypos)-50),(int(new_xpos)+50,int(init_ypos)+50),(0,255,0),3)\n",
+    "            #cv2.ellipse(A1,(int(new_xpos),int(init_ypos)),(100,50),0,120,170,(255,120,80),10)\n",
+    "            #cv2.cvtColor(A1, cv2.COLOR_RGB2BGR)\n",
+    "            out.write(A1)\n",
+    "            writer.writerow({'position x': new_xpos-35,'position y':init_ypos-35,'velocity x':v_init, 'velocity y':0})\n",
+    "        \n",
+    "    out.release()\n",
+    "    return A1\n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 168,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "3.35624426605022\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n"
+     ]
+    }
+   ],
+   "source": [
+    "#def generate_linear_constant_acceleration_noise(A,v_init,init_xpos,init_ypos,width,height,fps):\n",
+    "A1=generate_linear_constant_acceleration_noise(100,5,60,320,640,640,30,10)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 166,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "3.35624426605022\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n",
+      "320\n"
+     ]
+    }
+   ],
+   "source": [
+    "no_noise=generate_linear_constant_acceleration(100,5,60,320,640,640,30,20)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 161,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def Toss_Ball(A,v_init,init_xpos,init_ypos,width,height,fps,playtime,radius):\n",
+    "    a=0.5*A\n",
+    "    b=v_init\n",
+    "    c=-(width-init_xpos)\n",
+    "    \n",
+    "    #total_t=(-b+np.sqrt(b**2-4*a*c))/(2*a)\n",
+    "    #print(total_t)\n",
+    "    num_frames=math.ceil(playtime*fps)\n",
+    "    new_xpos=init_xpos\n",
+    "    new_ypos=init_ypos\n",
+    "    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')\n",
+    "    out = cv2.VideoWriter('Toss_ball.avi',fourcc, fps, (width, height))\n",
+    "    #data = open(\"toss_ball.txt\",\"w\")\n",
+    "    #data.write('Acceleration: '+ str(A) +'  Initial_velocity: ' + str(v_init) + \"\\n\")\n",
+    "    with open('Toss_ball.csv','w',newline='') as csvfile:\n",
+    "        fieldnames = ['position x','position y', 'velocity x','velocity y']\n",
+    "        writer = csv.DictWriter(csvfile,fieldnames=fieldnames)\n",
+    "        writer.writeheader()\n",
+    "        for i in range(num_frames):\n",
+    "            A1=np.zeros((height,width,3)).astype(np.uint8)\n",
+    "            v_init+= A*1/fps\n",
+    "            #print(v_init)\n",
+    "            new_ypos -=  v_init*(1/fps) +0.5*A*(1/fps)**2 \n",
+    "            #print(new_ypos)\n",
+    "            cv2.circle(A1, (int(init_xpos),int(new_ypos)), radius, (255,255,0), 10)\n",
+    "            #cv2.rectangle(A1,(int(new_xpos)-50,int(init_ypos)-50),(int(new_xpos)+50,int(init_ypos)+50),(0,255,0),3)\n",
+    "            #cv2.ellipse(A1,(int(new_xpos),int(init_ypos)),(100,50),0,120,170,(255,120,80),10)\n",
+    "\n",
+    "            #data.write('postion:('+str(int(init_xpos)) +','+ str(int(new_ypos))+\") velocity : \"+ str(v_init) +\"\\n\")\n",
+    "            out.write(A1)\n",
+    "            writer.writerow({'position x': init_xpos - 50 ,'position y':new_ypos - 50,'velocity x':0, 'velocity y':v_init})\n",
+    "            if new_ypos  > init_ypos:\n",
+    "                break\n",
+    "    #data.close()\n",
+    "    out.release()\n",
+    "    return A1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 162,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A1=Toss_Ball(-40,200,160,640,320,640,30,300,30)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 80,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A1=Toss_Ball(-98,600,500,2000,1000,2000,30,300)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 166,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def trajectory(A,v_init,theta,init_xpos,init_ypos,width,height,fps,playtime):\n",
+    "    vx_init = v_init * np.cos(np.pi*theta/180)\n",
+    "    vy_init = v_init * np.sin(np.pi*theta/180)\n",
+    "    a=0.5*A\n",
+    "    b=vy_init\n",
+    "    c=-(width-init_xpos)\n",
+    "    \n",
+    "    #total_t=(-b+np.sqrt(b**2-4*a*c))/(2*a)\n",
+    "    #print(total_t)\n",
+    "    num_frames=math.ceil(playtime*fps)\n",
+    "    new_xpos=init_xpos\n",
+    "    new_ypos=init_ypos\n",
+    "    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')\n",
+    "    out = cv2.VideoWriter('test2.avi',fourcc, fps, (width, height))\n",
+    "    for i in range(num_frames):\n",
+    "        A1=np.zeros((height,width,3)).astype(np.uint8)\n",
+    "        \n",
+    "        vy_init+= A*1/fps\n",
+    "        #print(v_init)\n",
+    "        \n",
+    "        new_xpos+=(vx_init/fps)\n",
+    "        new_ypos -=  vy_init*(1/fps) +0.5*A*(1/fps)**2 \n",
+    "        #print(new_ypos)\n",
+    "        cv2.circle(A1, (int(new_xpos),int(new_ypos)), 30, (255,255,0), 10)\n",
+    "        #cv2.rectangle(A1,(int(new_xpos)-50,int(init_ypos)-50),(int(new_xpos)+50,int(init_ypos)+50),(0,255,0),3)\n",
+    "        #cv2.ellipse(A1,(int(new_xpos),int(init_ypos)),(100,50),0,120,170,(255,120,80),10)\n",
+    "        #cv2.cvtColor(A1, cv2.COLOR_RGB2BGR)\n",
+    "        out.write(A1)\n",
+    "        if new_ypos  > init_ypos or new_xpos > width:\n",
+    "            break\n",
+    "        \n",
+    "    out.release()\n",
+    "    return A1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 163,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def combine(Acc,v_init,theta,init_xpos,init_ypos,width,height,fps,playtime,Acc1,v_init1,theta1,init_xpos1,init_ypos1,radius):\n",
+    "    vx_init = v_init * np.cos(np.pi*theta/180)\n",
+    "    vy_init = v_init * np.sin(np.pi*theta/180)\n",
+    "    a=0.5*Acc\n",
+    "    b=vy_init\n",
+    "    c=-(width-init_xpos)\n",
+    "    \n",
+    "    vx_init1 = v_init1 * np.cos(np.pi*theta1/180)\n",
+    "    vy_init1 = v_init1 * np.sin(np.pi*theta1/180)\n",
+    "    a1=0.5*Acc1\n",
+    "    b1=vy_init1\n",
+    "    c1=-(width-init_xpos1)\n",
+    "    \n",
+    "    #total_t=(-b+np.sqrt(b**2-4*a*c))/(2*a)\n",
+    "    #print(total_t)\n",
+    "    num_frames=math.ceil(playtime*fps)\n",
+    "    new_xpos=init_xpos\n",
+    "    new_ypos=init_ypos\n",
+    "    new_xpos1=init_xpos1\n",
+    "    new_ypos1=init_ypos1\n",
+    "    fourcc = cv2.VideoWriter_fourcc('M','J','P','G')\n",
+    "    out = cv2.VideoWriter('two_balls.avi',fourcc, fps, (width, height))\n",
+    "    #data = open(\"testooo.txt\",\"w\")\n",
+    "    #data.write('Acceleration1: '+ str(Acc) +', Acceleration2: '+ str(Acc1) +  \\\n",
+    "    #', Initial_velocity1: ' + str(v_init) +', Initial_velocity2: ' + str(v_init1) +\\\n",
+    "    #           ', angle1: '+ str(theta)+', angle2: '+ str(theta1)+\"\\n\")\n",
+    "    with open('two_balls.csv','w',newline='') as csvfile:\n",
+    "        fieldnames = ['position x1','position y1', 'velocity x1',\\\n",
+    "                      'velocity y1','position x2','position y2', 'velocity x2','velocity y2']\n",
+    "        writer = csv.DictWriter(csvfile,fieldnames=fieldnames)\n",
+    "        writer.writeheader()\n",
+    "        for i in range(num_frames):\n",
+    "            A1=np.zeros((height,width,3)).astype(np.uint8)\n",
+    "\n",
+    "            vy_init+= Acc*1/fps\n",
+    "            #print(v_init)\n",
+    "\n",
+    "            new_xpos+=(vx_init/fps)\n",
+    "            new_ypos -=  vy_init*(1/fps) +0.5*Acc*(1/fps)**2 \n",
+    "            #print(new_ypos)\n",
+    "            cv2.circle(A1, (int(new_xpos),int(new_ypos)), radius, (255,255,0), 10)\n",
+    "            #cv2.rectangle(A1,(int(new_xpos)-50,int(init_ypos)-50),(int(new_xpos)+50,int(init_ypos)+50),(0,255,0),3)\n",
+    "            #cv2.ellipse(A1,(int(new_xpos),int(init_ypos)),(100,50),0,120,170,(255,120,80),10)\n",
+    "            #cv2.cvtColor(A1, cv2.COLOR_RGB2BGR)\n",
+    "            vy_init1+= Acc1*1/fps\n",
+    "            #print(v_init)\n",
+    "\n",
+    "            new_xpos1 +=(vx_init1/fps)\n",
+    "            new_ypos1 -=  vy_init1*(1/fps) +0.5*Acc1*(1/fps)**2 \n",
+    "            cv2.circle(A1, (int(new_xpos1),int(new_ypos1)), radius, (255,255,0), 10)\n",
+    "            #data.write('postion1:('+str(int(new_xpos)) +','+ str(int(new_ypos))+\")\" + \\\n",
+    "            #           'postion2:('+str(int(new_xpos1)) +','+ str(int(new_ypos1))+\")\\n\")\n",
+    "            #cv2.circle(A1, (int(new_xpos1-radius),int(new_ypos1-radius)), 5, (255,255,0), 10)\n",
+    "\n",
+    "\n",
+    "            out.write(A1)\n",
+    "            writer.writerow({'position x1': new_xpos-50,'position y1':new_ypos-50,'velocity x1':vx_init, 'velocity y1':vy_init,\\\n",
+    "                            'position x2': new_xpos1-50,'position y2':new_ypos1-50,'velocity x2':vx_init1, 'velocity y2':vy_init1,\\\n",
+    "                           })\n",
+    "            if new_ypos  > init_ypos or new_xpos > width:\n",
+    "                break\n",
+    "        \n",
+    "    out.release()\n",
+    "    return A1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 164,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[[0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        ...,\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0]],\n",
+       "\n",
+       "       [[0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        ...,\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0]],\n",
+       "\n",
+       "       [[0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        ...,\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0]],\n",
+       "\n",
+       "       ...,\n",
+       "\n",
+       "       [[0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        ...,\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0]],\n",
+       "\n",
+       "       [[0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        ...,\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0]],\n",
+       "\n",
+       "       [[0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        ...,\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0],\n",
+       "        [0, 0, 0]]], dtype=uint8)"
+      ]
+     },
+     "execution_count": 164,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "#def combine(Acc,v_init,theta,init_xpos,init_ypos,width,height,fps,playtime,Acc1,v_init1,theta1,init_xpos1,init_ypos1,radius):\n",
+    "combine(-10,60,60,80,200,320,640,30,300,-10,-25,-15,200,300,30)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 167,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "A1=Toss_Ball(-98,600,500,2000,1000,2000,30,300)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "1.3900357138301864\n",
+      "[503]\n",
+      "[505]\n",
+      "[514]\n",
+      "[516]\n",
+      "[515]\n",
+      "[516]\n",
+      "[515]\n",
+      "[518]\n",
+      "[517]\n",
+      "[519]\n",
+      "[521]\n",
+      "[523]\n",
+      "[530]\n",
+      "[524]\n",
+      "[514]\n",
+      "[510]\n",
+      "[504]\n",
+      "[505]\n",
+      "[502]\n",
+      "[499]\n",
+      "[501]\n",
+      "[493]\n",
+      "[493]\n",
+      "[492]\n",
+      "[499]\n",
+      "[498]\n",
+      "[500]\n",
+      "[507]\n",
+      "[499]\n",
+      "[507]\n",
+      "[509]\n",
+      "[504]\n",
+      "[497]\n",
+      "[497]\n",
+      "[498]\n",
+      "[501]\n",
+      "[503]\n",
+      "[512]\n",
+      "[504]\n",
+      "[497]\n",
+      "[503]\n",
+      "[497]\n"
+     ]
+    }
+   ],
+   "source": [
+    "A1=generate_linear_constant_acceleration(1000,10,20,500,1000,1000,30)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 77,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7fa9bc9d2250>"
+      ]
+     },
+     "execution_count": 77,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "plt.imshow(A1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "generate_linear_constant_velocity(15,10,30,200,200,30)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 140,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.49999999999999994"
+      ]
+     },
+     "execution_count": 140,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "np.sin(30*np.pi/180)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 129,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "<ipython-input-129-bca0fbb6c1bf>:17: DeprecationWarning: This function is deprecated. Please call randint(200, 450 + 1) instead\n",
+      "  random_locations = np.random.random_integers(200,450, size=(200, 2))\n"
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "import cv2\n",
+    "\n",
+    "# initialize water image\n",
+    "height = 500\n",
+    "width = 700\n",
+    "water_depth = np.zeros((height, width), dtype=float)\n",
+    "\n",
+    "# initialize video writer\n",
+    "fourcc = cv2.VideoWriter_fourcc('M','J','P','G')\n",
+    "fps = 30\n",
+    "video_filename = 'output.avi'\n",
+    "out = cv2.VideoWriter(video_filename, fourcc, fps, (width, height))\n",
+    "\n",
+    "# new frame after each addition of water\n",
+    "for i in range(3):\n",
+    "    random_locations = np.random.random_integers(200,450, size=(200, 2))\n",
+    "    for item in random_locations:\n",
+    "        water_depth[item[0], item[1]] += 0.1\n",
+    "        #add this array to the video\n",
+    "        gray = cv2.normalize(water_depth, None, 255, 0, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)\n",
+    "        gray_3c = cv2.merge([gray, gray, gray])\n",
+    "        out.write(gray_3c)\n",
+    "\n",
+    "# close out the video writer\n",
+    "out.release()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 130,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<VideoWriter 0x7fd988025db0>"
+      ]
+     },
+     "execution_count": 130,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 95,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import cv2\n",
+    "import numpy as np\n",
+    "fourcc = cv2.VideoWriter_fourcc('M','P','E','G')\n",
+    "writer = cv2.VideoWriter('test1.mp4',cv2.VideoWriter_fourcc(*'mp4v'), 25, (640, 480), False)\n",
+    "for i in range(100):\n",
+    "    x = np.random.randint(255, size=(480, 640)).astype('uint8')\n",
+    "    writer.write(x)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
