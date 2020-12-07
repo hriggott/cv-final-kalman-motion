@@ -33,7 +33,7 @@ def main( args ):
     
     # Kalman set-up
     dt = 1 / fps
-    cov_z = 1  # assume static covariance measurement
+    cov_z = 20  # assume static covariance measurement
     cov_dynamics = 0.1
     
     t = np.arange( N ) * dt  # time
@@ -295,7 +295,7 @@ def plot_trajecories( x_kalman, y_kalman, x_predicted, y_predicted, x_measured, 
 if __name__ == '__main__':
     args = {}
     args['data_dir'] = '../data/'
-    args['vid_file'] = "two_balls.mov"
+    args['vid_file'] = "two_balls_noisy_background.mov"
     args['data_file'] = args['vid_file'].replace( '.mov', '.csv' )
     args['template_file'] = args['vid_file'].replace( '.mov', '_template.png' )
 
