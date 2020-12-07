@@ -24,12 +24,13 @@ def getIntegratedError(x_actual,y_actual,x,y,t):
     return x_error_integrated,y_error_integrated
 
 #Method that creates a subplot containing positions vs time, errors vs time, and y positions vs x positions. x_estimate and y_estimate can be either predicted or corrected.
+
 def getPlots(x_measured,y_measured,x_actual,y_actual,x_estimate,y_estimate,t,p_or_c):
     fig = plt.figure(figsize=(10,8))
-    ax1 = plt.subplot(411)
-    ax2 = plt.subplot(412)
-    ax3 = plt.subplot(413)
-    ax4 = plt.subplot(414)
+    ax1 = plt.subplot(221)
+    ax2 = plt.subplot(222)
+    ax3 = plt.subplot(223)
+    ax4 = plt.subplot(224)
     fig.tight_layout()
     
     #First plot is of the measured position, actual position, and estimated or predicted position for x and y vs time.
