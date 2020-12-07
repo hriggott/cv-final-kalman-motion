@@ -295,7 +295,7 @@ def plot_trajecories( x_kalman, y_kalman, x_predicted, y_predicted, x_measured, 
 if __name__ == '__main__':
     args = {}
     args['data_dir'] = '../data/'
-    args['vid_file'] = "two_balls.mov"
+    args['vid_file'] = "two_balls_noisy_background.mov"
     args['data_file'] = args['vid_file'].replace( '.mov', '.csv' )
     args['template_file'] = args['vid_file'].replace( '.mov', '_template.png' )
 
