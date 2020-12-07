@@ -33,7 +33,7 @@ def main( args ):
     
     # Kalman set-up
     dt = 1 / fps
-    cov_z = 1  # assume static covariance measurement
+    cov_z = 20  # assume static covariance measurement
     cov_dynamics = 0.1
     
     t = np.arange( N ) * dt  # time
