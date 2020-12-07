@@ -90,7 +90,7 @@ def main( args ):
             # perform the measurement
             # - region of interest
             roi = np.array( [[0, 0], [t_0, t_1]] ) + np.array( [y_pred, x_pred] ).reshape( -1, 2 )
-            roi_uncertainty = 30 * np.array( [[-1, -1], [1, 1]] )
+            roi_uncertainty = 50 * np.array( [[-1, -1], [1, 1]] )
             roi_uncertain = roi + roi_uncertainty  # region of interest to look for the image
             
             # -- change roi values to fit within the image
@@ -136,13 +136,13 @@ def main( args ):
 
     plt.show()
     
-    plt.savefig( fig_t, video_file.replace( '.mov', '_trajectory.png' ) )
+    fig_t.savefig( video_file.replace( '.mov', '_trajectory.png' ) )
     print( 'Saved figure:', video_file.replace( '.mov', '_trajectory.png' ) )
     
-    plt.savefig( fig_p, video_file.replace( '.mov', '_pred-err.png' ) )
+    fig_p.savefig( video_file.replace( '.mov', '_pred-err.png' ) )
     print( 'Saved figure:', video_file.replace( '.mov', '_pred-err.png' ) )
     
-    plt.savefig( fig_c, video_file.replace( '.mov', '_kalman-err.png' ) )
+    fig_c.savefig( video_file.replace( '.mov', '_kalman-err.png' ) )
     print( 'Saved figure:', video_file.replace( '.mov', '_kalman-err.png' ) )
     
     results = np.vstack( ( t, x_measured, y_measured, x_predicted, y_predicted, x_kalman, y_kalman ) ).T
@@ -215,7 +215,7 @@ def annotate_video( video_in_file, x, y, x_actual, y_actual, template ):
     fps = int( video_in.get( cv2.CAP_PROP_FPS ) )
     height = int( video_in.get( cv2.CAP_PROP_FRAME_HEIGHT ) )
     width = int( video_in.get( cv2.CAP_PROP_FRAME_WIDTH ) )
-    video_out = cv2.VideoWriter( video_out_file, fourcc, fps, ( width, height ) )
+    video_out = cv2.VideoWriter( video_out_file, fourcc, fps, ( height, width ) )
     
     t_0, t_1 = template.shape[:2]
     i = 0
@@ -295,7 +295,7 @@ def plot_trajecories( x_kalman, y_kalman, x_predicted, y_predicted, x_measured, 
 if __name__ == '__main__':
     args = {}
     args['data_dir'] = '../data/'
-    args['vid_file'] = "toss_ball.mov"
+    args['vid_file'] = "two_balls.mov"
     args['data_file'] = args['vid_file'].replace( '.mov', '.csv' )
     args['template_file'] = args['vid_file'].replace( '.mov', '_template.png' )
 
