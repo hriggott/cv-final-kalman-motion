@@ -32,7 +32,9 @@ class Linear_Kalman_Black_Box:
         self.prev_state = np.zeros([6,1])
         #Variable to store predicted state
         self.x_k_predict = np.zeros([6,1])
-
+        self.x_pos_predicted = []
+        self.y_pos_predicted = []
+        
     #Method for debugging purposes
     def getParams(self):
         print("A")
@@ -51,6 +53,8 @@ class Linear_Kalman_Black_Box:
         self.x_k_predict = self.A@self.prev_state
         self.P = self.A@self.P@np.transpose(self.A)+self.Q
         self.KalmanGain = self.P@np.transpose(self.H)@np.linalg.inv(self.H@self.P@np.transpose(self.H)+self.R)
+        self.x_pos_predicted.append(self.x_k_predict[0,0])
+        self.y_pos_predicted.append(self.x_k_predict[3,0])
         return self.x_k_predict[0,0],self.x_k_predict[3,0]
 
     #Update prediction
@@ -67,7 +71,12 @@ class Linear_Kalman_Black_Box:
         self.prev_state[3,0] = y_pos_measured
         self.x_pos.append(x_pos_measured)
         self.y_pos.append(y_pos_measured)
+        self.x_pos_predicted.append(x_pos_measured)
+        self.y_pos_predicted.append(y_pos_measured)
 
     #Returns the lists of corrected x and y positions. Used for analysis of algorithm.
     def getCorrectedPositions(self):
         return self.x_pos, self.y_pos
+    
+    def getPredictedPositions(self):
+        return self.x_pos_predicted, self.y_pos_predicted
