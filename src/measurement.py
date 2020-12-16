@@ -11,7 +11,16 @@ import numpy as np
 import numpy.linalg as la
 import cv2
 import matplotlib.pyplot as plt
-from scipy.signal import correlate2d    
+from scipy.signal import correlate2d
+from sklearn.cluster import MeanShift, estimate_bandwidth, KMeans, MiniBatchKMeans
+from sklearn.neighbors import LocalOutlierFactor
+
+# color HSV ranges
+COLOR_HSVRANGE_RED = ( ( 0, 50, 50 ), ( 10, 255, 255 ) )
+COLOR_HSVRANGE_BLUE = ( ( 110, 50, 50 ), ( 130, 255, 255 ) )
+COLOR_HSVRANGE_GREEN = ( ( 40, 50, 50 ), ( 75, 255, 255 ) )
+COLOR_HSVRANGE_YELLOW = ( ( 25, 50, 25 ), ( 35, 255, 255 ) )
+COLOR_HSVRANGE_TENNIS = ( COLOR_HSVRANGE_YELLOW[0], COLOR_HSVRANGE_GREEN[1] )
 
 
 def circle_position( img ):
@@ -35,7 +44,7 @@ def circle_position( img ):
         # calculate the mean
         mu = circles.mean( axis = 0 )  # the mean
         
-        Q = np.cov( circles - mu, rowvar = False )[:2, :2]  # the positional covariance
+        Q = np.cov( circles - mu, rowvar = False )[:2,:2]  # the positional covariance
         
         # make sure there is some uncertainty
         if la.norm( Q ) < min_covar:
@@ -53,6 +62,113 @@ def circle_position( img ):
     # else
     
 # circle_position
+
+
+def color_measurement( image, hsv_range, method = 'standard' ):
+    ''' Returns the center of mass of a color blob '''
+    image_hsv = cv2.cvtColor( image, cv2.COLOR_BGR2HSV )
+    
+    color_mask = cv2.inRange( image_hsv, hsv_range[0], hsv_range[1] )
+    
+    # outlier removal 
+    if method == 'standard':
+        # grab the non-zero coordinates
+        X, Y = np.meshgrid( np.arange( image.shape[1] ), np.arange( image.shape[0] ) )
+         
+        # get the center of mass
+        color_mask_norm = color_mask / color_mask.max()
+        x_com = np.sum( X * color_mask_norm ) / np.sum( color_mask_norm )
+        y_com = np.sum( Y * color_mask_norm ) / np.sum( color_mask_norm )
+        
+    # if
+    
+    elif method == 'kmeans':
+        pts = np.vstack( np.nonzero( color_mask ) ).T
+        cluster = KMeans( n_clusters = 3, max_iter = 20 ).fit( pts )
+        max_lbl = np.argmax( np.bincount( cluster.labels_ ) )
+        
+        pts_keep = pts[cluster.labels_ == max_lbl]
+        
+        y_com, x_com = np.mean( pts_keep, axis = 0 ) 
+        
+        color_mask = np.zeros_like( color_mask )
+        color_mask[pts_keep[:, 0], pts_keep[:, 1]] = 255
+        
+    # elif
+    
+    elif method == 'minibatch_kmeans':
+        raise NotImplementedError( f"'{method}' is not implemented yet." )
+    
+    # elif
+        
+    elif method == 'meanshift':
+        pts = np.vstack( np.nonzero( color_mask ) ).T
+        cluster = MeanShift( bandwidth = estimate_bandwidth( pts ) ).fit( pts )
+        max_lbl = np.argmax( np.bincount( cluster.labels_ ) )
+        
+        pts_keep = pts[cluster.labels_ == max_lbl]  # points to keep
+        
+        pts_com = np.mean( pts_keep, axis = 0 )
+        
+        y_com = pts_com[0]
+        x_com = pts_com[1]
+        
+        color_mask = np.zeros_like( color_mask )
+        color_mask[pts_keep[:, 0], pts_keep[:, 1]] = 255
+
+    # elif
+    
+    elif method == 'outlier_weight':
+        pts = np.vstack( np.nonzero( color_mask ) ).T
+        clf = LocalOutlierFactor( n_neighbors = 150, contamination = 'auto' )
+        clf.fit_predict( pts )
+        
+        # perform a weighting
+        weights = np.exp( -np.abs( clf.negative_outlier_factor_ + 1 ) )
+        
+        # weight the color mask
+        color_mask_norm = color_mask / color_mask.max()
+        color_mask_norm[pts[:, 0], pts[:, 1]] *= weights
+        
+        # grab the com
+        X, Y = np.meshgrid( np.arange( image.shape[1] ), np.arange( image.shape[0] ) )
+        x_com = np.sum( X * color_mask_norm ) / np.sum( color_mask_norm )
+        y_com = np.sum( Y * color_mask_norm ) / np.sum( color_mask_norm )
+        
+    # elif
+    
+    elif method == 'outlier_thresh':
+        pts = np.vstack( np.nonzero( color_mask ) ).T
+        clf = LocalOutlierFactor( n_neighbors = 150, contamination = 'auto', p = 1 )
+        clf.fit_predict( pts )
+        
+        # threshold points
+        thresh = ( np.abs( clf.negative_outlier_factor_ + 1 ) < 0.05 )
+        
+        pts_keep = pts[thresh]
+        
+        # get the com
+        pts_com = np.mean( pts_keep, axis = 0 )
+        
+        y_com = pts_com[0]
+        x_com = pts_com[1]
+        
+        color_mask = np.zeros_like( color_mask )
+        color_mask[pts_keep[:, 0], pts_keep[:, 1]] = 255
+        
+    # elif
+    
+    else:
+        raise NotImplementedError( f"'{method}' is not implemented yet." )
+    
+    # else
+
+    # grab the masked image
+    masked_image = cv2.bitwise_and( image, image, mask = color_mask )
+    
+    return x_com, y_com, color_mask, masked_image 
+    
+# color_measurement
 
 
 def find_coordinate_image( img, param = {} ):
@@ -243,6 +359,7 @@ def normxcorr2( template, image, mode = 'valid' ):
     return retval
     
 # normxcorr2
+
 
 def template_correlate( template, image ):
     ''' Returns the top left-point of the bounding box (x, y)'''
@@ -503,6 +620,43 @@ def main_normxcorr():
 # main_normxcorr
 
 
+def test_hsv_measurement( vid_file ):
+    # Set-up
+    vid_stream = cv2.VideoCapture( vid_file )  # open video stream
+    hsv_range = COLOR_HSVRANGE_TENNIS  # pick a hsv range
+    
+    while vid_stream.isOpened():
+        ret, frame = vid_stream.read()
+        
+        if not ret:
+            print( 'No frame left.' )
+            break
+        
+        # if
+        
+        # hsv tracking
+        x_com, y_com, _, color_frame = color_measurement( frame, hsv_range, method = 'kmeans' ) 
+        
+        # display results
+        color_frame = cv2.circle( color_frame, ( int( x_com ), int( y_com ) ), 5, [0, 0, 255], -1 )
+        color_frame = cv2.resize( color_frame, ( color_frame.shape[1] // 2, color_frame.shape[0] // 2 ) )
+        frame = cv2.circle( frame, ( int( x_com ), int( y_com ) ), 5, [0, 0, 255], -1 )
+        frame = cv2.resize( frame, ( frame.shape[1] // 2, frame.shape[0] // 2 ) )
+        
+        cv2.imshow( 'masked frame', color_frame )
+        cv2.imshow( 'real frame', frame )
+        if cv2.waitKey( 1 ) & 0xFF == ord( 'q' ):
+            break
+        
+        # if 
+    
+    # while
+    
+    vid_stream.release()
+
+# test_hsv_measurement
+
+
 if __name__ == '__main__':
-    main()
+    test_hsv_measurement( '../data/Ball_Drop_real.mov' )
     print( 'Program terminated.' )
