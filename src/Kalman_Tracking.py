@@ -4,8 +4,8 @@ import analysis
 
 import cv2, os
 import numpy as np
+import numpy.linalg as la
 import matplotlib.pyplot as plt
-from matplotlib.figure import figaspect
 import time
 
 
@@ -91,9 +91,7 @@ def annotate_video_real( video_in_file, x, y, template ):
         x_i = int( x[i] )
         y_i = int( y[i] )
         
-        frame = cv2.rectangle( frame, ( x_i - t_0 // 2, y_i - t_1 // 2 ), ( x_i + t_0 // 2, y_i + t_1 // 2 ),
-                              ( 0, 255, 0 ), 3 )
-        frame = cv2.circle( frame, ( x_i, y_i ), 5, ( 0, 0, 255 ), -1 )
+        frame = cv2.circle( frame, ( x_i, y_i ), 8, ( 0, 0, 255 ), -1 )
         
         video_out.write( frame )
         cv2.imshow( 'annotated video:', frame )
@@ -112,6 +110,24 @@ def annotate_video_real( video_in_file, x, y, template ):
     print( 'Saved movie:', video_out_file )
     
 # annotate_video_real
+
+
+def check_valid_roi( image_shape, roi, template_shape ):
+    
+    np_roi = np.array( roi )
+
+    # flatten out of range inputs
+    np_roi[np_roi < 0] = 0
+    np_roi[np_roi[:, 0] >= image_shape[0], 0] = image_shape[0] - 1
+    np_roi[np_roi[:, 1] >= image_shape[1], 1] = image_shape[1] - 1
+    
+    win_size = np.diff( np_roi, axis = 0 )
+    
+    retval = np.all( win_size > np.array( template_shape ) / 1.25 )  # want a good portion of the template
+        
+    return retval
+
+# check_valid_roi
 
 
 def plot_trajecories( x_kalman, y_kalman, x_predicted, y_predicted, x_measured, y_measured,
@@ -368,8 +384,9 @@ def main_real( args ):
     data_dir = args['data_dir']
     video_file = data_dir + args["vid_file"]
     template_file = data_dir + args['template_file']
-    N_update = 10 if 'N_update' not in args.keys() else int( args['N_update'] ) # how often prompted for updates 
-#     N_skip = 1 if 'N_skip' not in args.keys() else int(args['N_skip']) # how many frames to skip per iteration (1 doees no skipping)
+    N_update = 10 if 'N_update' not in args.keys() else int( args['N_update'] )  # how often prompted for updates 
+    N_skip = 1 if 'N_skip' not in args.keys() else int( args['N_skip'] )  # how many frames to skip per iteration (1 doees no skipping)
+    N_skip = N_skip if N_skip >= 1 else 1  # floor it to 1
     
     # load the image template
     template = cv2.imread( template_file, cv2.IMREAD_ANYCOLOR )
@@ -387,8 +404,8 @@ def main_real( args ):
     
     # Kalman set-up
     dt = 1 / fps
-    cov_z = 20  # assume static covariance measurement
-    cov_dynamics = 0.1
+    cov_z = 80  # assume static covariance measurement
+    cov_dynamics = 20
     
     t = np.arange( N ) * dt  # time
     model = Linear_Kalman_Black_Box( dt, cov_dynamics, cov_z )
@@ -411,12 +428,20 @@ def main_real( args ):
     obj_kp, obj_desc = sift.detectAndCompute( template_gray, None )
     
     # perform the Kalman tracking
-    i = 0
+    i = -1
     t0 = time.time()
-    print( f'Beginning Kalman filtering. Will update every {N_update} iterations...' )
+    print( 'Beginning Kalman filtering' )
+    if N_skip > 1:
+        print( f"Will skip every {N_skip} frames" )
+    print( f'Will update every {N_update} iterations...' )
     while video.isOpened():
-        ret, frame = video.read()
-        
+        for _ in range( N_skip ):
+            ret, frame = video.read()
+            # counter update
+            i += 1
+
+        # for
+            
         if not ret:
             print( 'Error grabbing frame. Stopping tracking...' )
             break
@@ -446,7 +471,7 @@ def main_real( args ):
             # perform the measurement
             # - region of interest
             roi = np.array( [[0, 0], [t_0, t_1]] ) + np.array( [y_pred, x_pred] ).reshape( -1, 2 )
-            roi_uncertainty = 100 * np.array( [[-1, -1], [1, 1]] )
+            roi_uncertainty = 300 * np.array( [[-1, -1], [1, 1]] )
             roi_uncertain = roi + roi_uncertainty  # region of interest to look for the image
             
             # -- change roi values to fit within the image
@@ -454,9 +479,24 @@ def main_real( args ):
             roi_uncertain[roi_uncertain[:, 0] > frame.shape[0], 0] = frame.shape[0]
             roi_uncertain[roi_uncertain[:, 1] > frame.shape[1], 1] = frame.shape[1]
             roi_uncertain = roi_uncertain.astype( int )
-            roi_mask = mask_roi( ( height, width ), roi_uncertain ).astype( np.uint8 )
+            
+            # check to see if we get a valid roi
+            if check_valid_roi( frame.shape[:2], roi_uncertain, ( t_0, t_1 ) ):
+                roi_mask = mask_roi( ( height, width ), roi_uncertain ).astype( np.uint8 )
+                
+            else:
+                roi_mask = None
+                
+            # else
             
             x_meas, y_meas , *_ = meas.feature_matching( frame, template, obj_kp, obj_desc, sift, mask = roi_mask )
+            
+            # take previous measurement if none found
+            if x_meas is None:
+                x_meas = x_measured[i - 1]
+            if y_meas is None:
+                y_meas = y_measured[i - 1]
+                
             x_measured[i] = x_meas
             y_measured[i] = y_meas
             
@@ -468,15 +508,12 @@ def main_real( args ):
             
         # else
         
-        # counter update
-        i += 1
-        
         # prompt update
-        if i % N_update == 0:
+        if ( i % N_update == 0 ) and ( i > 0 ):
             t1 = time.time()
             dt = ( t1 - t0 ) / N_update
             t_left = ( N - i ) * dt
-            print( f"Percent complete: {i/N*100:.1f}% | Time left: {t_left:.1f}s" )
+            print( f"Percent complete: {i/N*100:.1f}% | Avg. time per iter.: {dt:.3f}s | Time left: {t_left:.1f}s" )
             t0 = t1
             
         # if
@@ -493,6 +530,11 @@ def main_real( args ):
     fig_t.savefig( video_file.replace( '.mov', '_trajectory.png' ) )
     print( 'Saved figure:', video_file.replace( '.mov', '_trajectory.png' ) )
     
+    # saving files
+    results = np.vstack( ( t, x_measured, y_measured, x_predicted, y_predicted, x_kalman, y_kalman ) ).T
+    np.savetxt( video_file.replace( '.mov', '_results.csv' ), results, delimiter = ',',
+               header = 'time, x_measured, y_measured, x_predicted, y_predicted, x_kalman, y_kalman' )
+    
     # release the video
     video.release()
     
@@ -505,6 +547,7 @@ if __name__ == '__main__':
     args['vid_file'] = "hold_square.mov"
 #     args['data_file'] = args['vid_file'].replace( '.mov', '.csv' )
     args['template_file'] = args['vid_file'].replace( '.mov', '_template.png' )
+    args['N_skip'] = 1
 
     main_real( args )
     
