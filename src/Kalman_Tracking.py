@@ -449,7 +449,8 @@ def main_real( args ):
         # if
         
         if i == 0:
-            x0, y0 , *_ = meas.feature_matching( frame, template, obj_kp, obj_desc, sift, mask = None )
+            x0, y0 , *_ = meas.feature_matching( frame, template, obj_kp, obj_desc, sift, mask = None,
+                                                 match_method='brute-force' )
             model.setInitialPosition( x0, y0 )  # start with the true location
             x_measured[i] = x0
             y_measured[i] = y0
