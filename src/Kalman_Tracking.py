@@ -528,6 +528,9 @@ def main_real( args ):
     
     # saving figures
     fig_t.savefig( video_file.replace( '.mov', '_trajectory.png' ) )
+    mng = plt.get_current_fig_manager()
+    mng.frame.Maximize(True)
+    plt.show()
     print( 'Saved figure:', video_file.replace( '.mov', '_trajectory.png' ) )
     
     # saving files
