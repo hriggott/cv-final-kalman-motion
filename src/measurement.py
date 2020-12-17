@@ -374,7 +374,7 @@ def feature_matching( image, template, obj_kp, obj_desc, feature_detector: cv2.F
         
         elif len( good_matches ) > 0:
             xform = get_affine_transform( keypts_obj, keypts_img )
-            pt_temp_com = np.array( template.shape[:2:-1] ).reshape( 1, 1, 2 ) / 2 
+            pt_temp_com = np.array( [template.shape[1], template.shape[0]] ).reshape( 1, 1, 2 ) / 2 
             pt_img_com = cv2.transform( pt_temp_com, xform ).squeeze()
             x_com = pt_img_com[0]
             y_com = pt_img_com[1]
@@ -886,7 +886,6 @@ def test_feature_tracking( vid_file, template_file ):
             break
         
         # if
-        frame_gray = cv2.cvtColor( frame, cv2.COLOR_BGR2GRAY )
         
         # feature tracking
         x_com, y_com, xform, frame_match = feature_matching( frame, template, obj_kp, obj_desc, sift, mask = None )
