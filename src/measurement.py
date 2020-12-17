@@ -172,37 +172,6 @@ def color_measurement( image, hsv_range, method = 'standard' ):
 # color_measurement
 
 
-def get_affine_transform( src, dst ):
-    ''' estimate affine transform via least squares 
-    
-        @param src: [N x 2] array
-        @param dst: [N x 2] array
-        
-        @returns m [2 x 3] s.t. m @ src -> dst
-    
-    '''
-    # assertions
-    assert( src.shape[1:] == ( 2, ) )
-    assert( dst.shape[1:] == ( 2, ) )
-     
-    # construct linalg lstsq
-    A = np.zeros( ( 2 * src.shape[0], 6 ) )
-    b = dst.reshape( -1 )
-    
-    src_h = np.hstack( ( src, np.ones( src.shape[0], 1 ) ) )  # homogeneous coords
-    
-    A[0::2,:3] = src_h
-    A[1::2,:3] = src_h
-    
-    # perform least squares
-    t_vect, *_ = np.linalg.lstsq( A, b, rcond = None )
-    
-    # reshape to a [2 x 3 matrix]
-    xform = t_vect.reshape( 2, 3 )
-    
-    return xform
-
-
 def find_coordinate_image( img, param = {} ):
     ''' Helper function for finding template bounding boxes '''
     pts = []
@@ -406,6 +375,39 @@ def feature_matching( image, obj_kp, obj_desc, feature_detector: cv2.Feature2D, 
     return x_trans, y_trans, xform
     
 # feature_matching
+
+
+def get_affine_transform( src, dst ):
+    ''' estimate affine transform via least squares 
+    
+        @param src: [N x 2] array
+        @param dst: [N x 2] array
+        
+        @returns m [2 x 3] s.t. m @ src -> dst
+    
+    '''
+    # assertions
+    assert( src.shape[1:] == ( 2, ) )
+    assert( dst.shape[1:] == ( 2, ) )
+     
+    # construct linalg lstsq
+    A = np.zeros( ( 2 * src.shape[0], 6 ) )
+    b = dst.reshape( -1 )
+    
+    src_h = np.hstack( ( src, np.ones( src.shape[0], 1 ) ) )  # homogeneous coords
+    
+    A[0::2,:3] = src_h
+    A[1::2,:3] = src_h
+    
+    # perform least squares
+    t_vect, *_ = np.linalg.lstsq( A, b, rcond = None )
+    
+    # reshape to a [2 x 3 matrix]
+    xform = t_vect.reshape( 2, 3 )
+    
+    return xform
+
+# get_affine_transform
 
 
 def get_keypoint_coord_from_match( matches, kp1, kp2, index ):
