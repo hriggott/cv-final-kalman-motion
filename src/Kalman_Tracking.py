@@ -8,6 +8,22 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import figaspect
 
 
+def mask_roi( image_shape, roi ):
+    X, Y = np.meshgrid( np.arange( image_shape[1] ), np.arange( image_shape[0] ) )
+    
+    x_lo = roi[0][0]
+    x_hi = roi[1][0]
+    
+    y_lo = roi[0][1]
+    y_hi = roi[1][1]
+    
+    mask = ( ( x_lo <= X ) & ( X <= x_hi ) ) & ( ( y_lo <= Y ) & ( Y <= y_hi ) )
+    
+    return mask
+
+# mask_roi
+
+
 def main( args ):
     ''' main method '''
     data_dir = "../data/"
