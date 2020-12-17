@@ -343,7 +343,6 @@ def feature_matching( image, template, obj_kp, obj_desc, feature_detector: cv2.F
         # create flann matcher
         flann = cv2.FlannBasedMatcher( index_params, search_params )
         
-        # begin feature matching
         matches = flann.knnMatch( obj_desc, img_desc, k = 2 )
         good_matches = [m for m, n in matches if m.distance < 0.7 * n.distance]  # filter out for good matches
     
@@ -385,6 +384,7 @@ def feature_matching( image, template, obj_kp, obj_desc, feature_detector: cv2.F
             
         else: 
             x_com, y_com = ( None, None )
+            xform = None
             image_match = None
             
         # else
