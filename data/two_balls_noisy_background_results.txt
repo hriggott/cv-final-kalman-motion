@@ -1,5 +1,0 @@
-*_att1:
-	Uses a smaller measurement covariance of 1
-
-*_att2: 
-	Uses a larger measurement covariance of 20
